@@ -4,6 +4,9 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import "./App.css";
 
+// --- STORE THE URL HERE ---
+const API_BASE_URL = "https://inventory-backend-8feq.onrender.com";
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [view, setView] = useState("login");
@@ -81,93 +84,88 @@ function App() {
     }
   };
 
-const handleLogin = (e) => {
-  e.preventDefault();
-  const formData = new FormData(e.target);
-  const email = formData.get("email");
-  const password = formData.get("password");
-  const savedUser = localStorage.getItem(`user_${email}`);
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const email = formData.get("email");
+    const password = formData.get("password");
+    const savedUser = localStorage.getItem(`user_${email}`);
 
-  if (savedUser) {
-    const userData = JSON.parse(savedUser);
-    if (userData.password === password) {
-      // FIX: Include email here so fetchProducts can use it later
-      const busInfo = {
-        name: userData.name,
-        logo: userData.logo,
-        email: userData.email,
-      };
-      setBusiness(busInfo);
-      localStorage.setItem("activeBusiness", JSON.stringify(busInfo));
-      setIsLoggedIn(true);
-
-      // After login, immediately fetch this user's specific products
-      fetchProducts();
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      if (userData.password === password) {
+        const busInfo = {
+          name: userData.name,
+          logo: userData.logo,
+          email: userData.email,
+        };
+        setBusiness(busInfo);
+        localStorage.setItem("activeBusiness", JSON.stringify(busInfo));
+        setIsLoggedIn(true);
+        fetchProducts();
+      } else {
+        showFeedback("Wrong password!", "error");
+      }
     } else {
-      showFeedback("Wrong password!", "error");
+      showFeedback("User not found!", "error");
     }
-  } else {
-    showFeedback("User not found!", "error");
-  }
-};
+  };
 
-const handleLogout = () => {
-  localStorage.removeItem("activeBusiness"); // Remove the user session
-  setProducts([]); // <--- THIS LINE IS THE FIX: It clears the screen immediately
-  setIsLoggedIn(false);
-};
-
-const fetchProducts = async () => {
-  const user = JSON.parse(localStorage.getItem("activeBusiness"));
-
-  // If no user/email, don't even try to fetch (prevents seeing leaked data)
-  if (!user || !user.email) {
+  const handleLogout = () => {
+    localStorage.removeItem("activeBusiness");
     setProducts([]);
-    return;
-  }
+    setIsLoggedIn(false);
+  };
 
-  try {
-    const res = await axios.get(
-      `http://localhost:8080/api/products?email=${user.email}`
-    );
-    setProducts(res.data);
-  } catch (err) {
-    console.error("Fetch failed", err);
-  }
-};
-const handleAddProduct = async (e) => {
-  e.preventDefault();
+  const fetchProducts = async () => {
+    const user = JSON.parse(localStorage.getItem("activeBusiness"));
 
-  // Get current user from localStorage
-  const user = JSON.parse(localStorage.getItem("activeBusiness"));
+    if (!user || !user.email) {
+      setProducts([]);
+      return;
+    }
 
-  if (!user || !user.email) {
-    showFeedback("Session expired. Please login.", "error");
-    return;
-  }
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}/api/products?email=${user.email}`
+      );
+      setProducts(res.data);
+    } catch (err) {
+      console.error("Fetch failed", err);
+    }
+  };
 
-  try {
-    await axios.post("http://localhost:8080/api/products", {
-      name: newProduct.name,
-      sku: newProduct.sku,
-      price: newProduct.price,
-      quantity: newProduct.quantity,
-      userEmail: user.email, // Send the tag to the backend
-    });
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    const user = JSON.parse(localStorage.getItem("activeBusiness"));
 
-    setNewProduct({ name: "", sku: "", price: "", quantity: "" });
-    fetchProducts(); // Refresh the list
-    showFeedback("Registered Successfully", "success");
-  } catch (err) {
-    console.error("Registration failed:", err);
-    showFeedback("SKU already exists in your inventory!", "error");
-  }
-};
+    if (!user || !user.email) {
+      showFeedback("Session expired. Please login.", "error");
+      return;
+    }
+
+    try {
+      await axios.post(`${API_BASE_URL}/api/products`, {
+        name: newProduct.name,
+        sku: newProduct.sku,
+        price: newProduct.price,
+        quantity: newProduct.quantity,
+        userEmail: user.email,
+      });
+
+      setNewProduct({ name: "", sku: "", price: "", quantity: "" });
+      fetchProducts();
+      showFeedback("Registered Successfully", "success");
+    } catch (err) {
+      console.error("Registration failed:", err);
+      showFeedback("SKU already exists in your inventory!", "error");
+    }
+  };
 
   const updateQuantity = async (product, change) => {
     const newQty = parseInt(product.quantity) + change;
     if (newQty < 0) return;
-    await axios.put(`http://localhost:8080/api/products/${product.id}`, {
+    await axios.put(`${API_BASE_URL}/api/products/${product.id}`, {
       ...product,
       quantity: newQty,
     });
@@ -176,7 +174,7 @@ const handleAddProduct = async (e) => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this item?")) {
-      await axios.delete(`http://localhost:8080/api/products/${id}`);
+      await axios.delete(`${API_BASE_URL}/api/products/${id}`);
       fetchProducts();
       showFeedback("Item Deleted", "success");
     }
@@ -185,7 +183,7 @@ const handleAddProduct = async (e) => {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     await axios.put(
-      `http://localhost:8080/api/products/${editingProduct.id}`,
+      `${API_BASE_URL}/api/products/${editingProduct.id}`,
       editingProduct
     );
     setEditingProduct(null);
@@ -226,10 +224,9 @@ const handleAddProduct = async (e) => {
     });
 
     doc.save(`${business.name}_${type}_Report.pdf`);
-
-    // --- NEW: SUCCESS POPUP ---
     showFeedback(`${title} Downloaded!`, "success");
   };
+
   const filteredProducts = products.filter(
     (p) =>
       (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -242,7 +239,6 @@ const handleAddProduct = async (e) => {
   if (!isLoggedIn) {
     return (
       <div className="auth-container">
-        {/* 1. If there is a message, show ONLY the message and hide the card */}
         {message.text ? (
           <div className={`status-overlay ${message.type}`}>
             <div className="status-content">
@@ -254,7 +250,6 @@ const handleAddProduct = async (e) => {
             </div>
           </div>
         ) : (
-          /* 2. If there is NO message, show the card normally */
           <div className="auth-card">
             <h2>{view === "login" ? "Sign In" : "Register Business"}</h2>
             <form
