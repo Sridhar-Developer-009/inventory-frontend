@@ -43,159 +43,131 @@ function App() {
     setTimeout(() => setMessage({ text: "", type: "" }), 3000);
   };
 
- const handleSignup = (e) => {
-   e.preventDefault();
-   const formData = new FormData(e.target);
-   const busName = formData.get("busName");
-   const email = formData.get("email");
-   const password = formData.get("password");
-   const file = e.target.busLogo.files[0];
+  const handleSignup = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const busName = formData.get("busName");
+    const email = formData.get("email");
+    const password = formData.get("password");
+    const file = e.target.busLogo.files[0];
 
-   // --- CHANGED SECTION: Send to Cloud instead of LocalStorage ---
-   const saveAccount = async (logoData = "") => {
-     try {
-       const newUser = {
-         name: busName,
-         logo: logoData,
-         email: email,
-         password: password,
-       };
-
-       // Send to your Spring Boot Backend
-       await axios.post(`${API_BASE_URL}/api/users/signup`, newUser);
-
-       showFeedback("Account Created!", "success");
-       setView("login");
-     } catch (err) {
-       console.error("Signup error:", err);
-       // Fallback message if the server is down or email exists
-       const errMsg = err.response?.data || "Signup failed. Try again.";
-       showFeedback(errMsg, "error");
-     }
-   };
-   // -----------------------------------------------------------
-
-   if (file) {
-     const reader = new FileReader();
-     reader.onload = (event) => {
-       const img = new Image();
-       img.onload = () => {
-         const canvas = document.createElement("canvas");
-         const MAX_WIDTH = 150;
-         const scaleSize = MAX_WIDTH / img.width;
-         canvas.width = MAX_WIDTH;
-         canvas.height = img.height * scaleSize;
-         const ctx = canvas.getContext("2d");
-         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-         // Calls the new async saveAccount
-         saveAccount(canvas.toDataURL("image/jpeg", 0.7));
-       };
-       img.src = event.target.result;
-     };
-     reader.readAsDataURL(file);
-   } else {
-     saveAccount();
-   }
- };
-
-const handleLogin = async (e) => {
-  e.preventDefault();
-  const formData = new FormData(e.target);
-  const email = formData.get("email");
-  const password = formData.get("password");
-
-  try {
-    // Ask Spring Boot to check the Aiven Database
-    const res = await axios.post(`${API_BASE_URL}/api/users/login`, {
-      email,
-      password,
-    });
-
-    // Spring Boot returns the user object { name, email, logo }
-    const userData = res.data;
-
-    const busInfo = {
-      name: userData.name,
-      logo: userData.logo,
-      email: userData.email,
+    const saveAccount = async (logoData = "") => {
+      try {
+        const newUser = {
+          name: busName,
+          logo: logoData,
+          email: email,
+          password: password,
+        };
+        await axios.post(`${API_BASE_URL}/api/users/signup`, newUser);
+        showFeedback("Account Created!", "success");
+        setView("login");
+      } catch (err) {
+        const errMsg = err.response?.data || "Signup failed. Try again.";
+        showFeedback(errMsg, "error");
+      }
     };
 
-    setBusiness(busInfo);
-    // We only save the ACTIVE session locally, not the password/account details
-    localStorage.setItem("activeBusiness", JSON.stringify(busInfo));
-    setIsLoggedIn(true);
-    fetchProducts();
-  } catch (err) {
-    const errMsg =
-      err.response?.status === 401
-        ? "Wrong password!"
-        : "User not found or Server error";
-    showFeedback(errMsg, "error");
-  }
-};
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 150;
+          const scaleSize = MAX_WIDTH / img.width;
+          canvas.width = MAX_WIDTH;
+          canvas.height = img.height * scaleSize;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          saveAccount(canvas.toDataURL("image/jpeg", 0.7));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      saveAccount();
+    }
+  };
 
-const handleLogout = () => {
-  localStorage.removeItem("activeBusiness");
-  setBusiness({ name: "", logo: "" }); // Reset business state
-  setProducts([]);
-  setIsLoggedIn(false);
-};# 1. Check which files you changed (like App.js)
-git status
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const email = formData.get("email");
+    const password = formData.get("password");
 
-# 2. Add the changes
-git add .
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/users/login`, {
+        email,
+        password,
+      });
 
-# 3. Commit the changes
-git commit -m "Update frontend to use Cloud Login and Signup"
+      const userData = res.data;
+      const busInfo = {
+        name: userData.name,
+        logo: userData.logo,
+        email: userData.email,
+      };
 
-# 4. Push to GitHub
-git push origin main
+      setBusiness(busInfo);
+      localStorage.setItem("activeBusiness", JSON.stringify(busInfo));
+      setIsLoggedIn(true);
+      fetchProducts();
+    } catch (err) {
+      const errMsg =
+        err.response?.status === 401
+          ? "Wrong password!"
+          : "User not found or Server error";
+      showFeedback(errMsg, "error");
+    }
+  };
 
-const fetchProducts = async () => {
-  const user = JSON.parse(localStorage.getItem("activeBusiness"));
-
-  if (!user || !user.email) {
+  const handleLogout = () => {
+    localStorage.removeItem("activeBusiness");
+    setBusiness({ name: "", logo: "" });
     setProducts([]);
-    return;
-  }
+    setIsLoggedIn(false);
+  };
 
-  try {
-    const res = await axios.get(
-      `${API_BASE_URL}/api/products?email=${user.email}`
-    );
-    setProducts(res.data);
-  } catch (err) {
-    console.error("Fetch failed", err);
-  }
-};
+  const fetchProducts = async () => {
+    const user = JSON.parse(localStorage.getItem("activeBusiness"));
+    if (!user || !user.email) {
+      setProducts([]);
+      return;
+    }
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}/api/products?email=${user.email}`
+      );
+      setProducts(res.data);
+    } catch (err) {
+      console.error("Fetch failed", err);
+    }
+  };
 
-const handleAddProduct = async (e) => {
-  e.preventDefault();
-  const user = JSON.parse(localStorage.getItem("activeBusiness"));
-
-  if (!user || !user.email) {
-    showFeedback("Session expired. Please login.", "error");
-    return;
-  }
-
-  try {
-    await axios.post(`${API_BASE_URL}/api/products`, {
-      name: newProduct.name,
-      sku: newProduct.sku,
-      price: newProduct.price,
-      quantity: newProduct.quantity,
-      userEmail: user.email,
-    });
-
-    setNewProduct({ name: "", sku: "", price: "", quantity: "" });
-    fetchProducts();
-    showFeedback("Registered Successfully", "success");
-  } catch (err) {
-    console.error("Registration failed:", err);
-    showFeedback("SKU already exists in your inventory!", "error");
-  }
-};
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    const user = JSON.parse(localStorage.getItem("activeBusiness"));
+    if (!user || !user.email) {
+      showFeedback("Session expired. Please login.", "error");
+      return;
+    }
+    try {
+      await axios.post(`${API_BASE_URL}/api/products`, {
+        name: newProduct.name,
+        sku: newProduct.sku,
+        price: newProduct.price,
+        quantity: newProduct.quantity,
+        userEmail: user.email,
+      });
+      setNewProduct({ name: "", sku: "", price: "", quantity: "" });
+      fetchProducts();
+      showFeedback("Registered Successfully", "success");
+    } catch (err) {
+      console.error("Registration failed:", err);
+      showFeedback("SKU already exists in your inventory!", "error");
+    }
+  };
 
   const updateQuantity = async (product, change) => {
     const newQty = parseInt(product.quantity) + change;
@@ -235,7 +207,6 @@ const handleAddProduct = async (e) => {
         type === "restock"
           ? "No items need restocking!"
           : "Your inventory is currently empty!";
-
       showFeedback(errorMsg, "error");
       return;
     }
@@ -293,7 +264,7 @@ const handleAddProduct = async (e) => {
             >
               {view === "signup" && (
                 <>
-                  <input name="busName" placeholder="Bussiness Name" required />
+                  <input name="busName" placeholder="Business Name" required />
                   <div className="file-upload-wrapper">
                     <label>Logo Upload</label>
                     <input type="file" name="busLogo" accept="image/*" />
