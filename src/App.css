@@ -11,12 +11,22 @@
 }
 
 [data-theme="light"] {
-  --bg: #f1f5f9;
-  --surface: #ffffff;
-  --text: #0f172a;
-  --text-dim: #64748b;
-  --border: #e2e8f0;
-  --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+ --bg: #f8f9fa;       
+  
+  /* Pure White: For cards so they stand out slightly */
+  --surface: #ffffff;  
+  
+  /* Soft Navy: Easier to read than pure black */
+  --text: #1e293b;     
+  
+  /* Muted Grey: For SKU and smaller details */
+  --text-dim: #64748b; 
+  
+  /* Very thin, light border */
+  --border: #e2e8f0;   
+  
+  /* Soft, spread-out shadow */
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 * {
