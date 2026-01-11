@@ -84,83 +84,83 @@ function App() {
     }
   };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const email = formData.get("email");
-    const password = formData.get("password");
-    const savedUser = localStorage.getItem(`user_${email}`);
+const handleLogin = (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const email = formData.get("email");
+  const password = formData.get("password");
+  const savedUser = localStorage.getItem(`user_${email}`);
 
-    if (savedUser) {
-      const userData = JSON.parse(savedUser);
-      if (userData.password === password) {
-        const busInfo = {
-          name: userData.name,
-          logo: userData.logo,
-          email: userData.email,
-        };
-        setBusiness(busInfo);
-        localStorage.setItem("activeBusiness", JSON.stringify(busInfo));
-        setIsLoggedIn(true);
-        fetchProducts();
-      } else {
-        showFeedback("Wrong password!", "error");
-      }
-    } else {
-      showFeedback("User not found!", "error");
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("activeBusiness");
-    setProducts([]);
-    setIsLoggedIn(false);
-  };
-
-  const fetchProducts = async () => {
-    const user = JSON.parse(localStorage.getItem("activeBusiness"));
-
-    if (!user || !user.email) {
-      setProducts([]);
-      return;
-    }
-
-    try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/products?email=${user.email}`
-      );
-      setProducts(res.data);
-    } catch (err) {
-      console.error("Fetch failed", err);
-    }
-  };
-
-  const handleAddProduct = async (e) => {
-    e.preventDefault();
-    const user = JSON.parse(localStorage.getItem("activeBusiness"));
-
-    if (!user || !user.email) {
-      showFeedback("Session expired. Please login.", "error");
-      return;
-    }
-
-    try {
-      await axios.post(`${API_BASE_URL}/api/products`, {
-        name: newProduct.name,
-        sku: newProduct.sku,
-        price: newProduct.price,
-        quantity: newProduct.quantity,
-        userEmail: user.email,
-      });
-
-      setNewProduct({ name: "", sku: "", price: "", quantity: "" });
+  if (savedUser) {
+    const userData = JSON.parse(savedUser);
+    if (userData.password === password) {
+      const busInfo = {
+        name: userData.name,
+        logo: userData.logo,
+        email: userData.email,
+      };
+      setBusiness(busInfo);
+      localStorage.setItem("activeBusiness", JSON.stringify(busInfo));
+      setIsLoggedIn(true);
       fetchProducts();
-      showFeedback("Registered Successfully", "success");
-    } catch (err) {
-      console.error("Registration failed:", err);
-      showFeedback("SKU already exists in your inventory!", "error");
+    } else {
+      showFeedback("Wrong password!", "error");
     }
-  };
+  } else {
+    showFeedback("User not found!", "error");
+  }
+};
+
+const handleLogout = () => {
+  localStorage.removeItem("activeBusiness");
+  setProducts([]);
+  setIsLoggedIn(false);
+};
+
+const fetchProducts = async () => {
+  const user = JSON.parse(localStorage.getItem("activeBusiness"));
+
+  if (!user || !user.email) {
+    setProducts([]);
+    return;
+  }
+
+  try {
+    const res = await axios.get(
+      `${API_BASE_URL}/api/products?email=${user.email}`
+    );
+    setProducts(res.data);
+  } catch (err) {
+    console.error("Fetch failed", err);
+  }
+};
+
+const handleAddProduct = async (e) => {
+  e.preventDefault();
+  const user = JSON.parse(localStorage.getItem("activeBusiness"));
+
+  if (!user || !user.email) {
+    showFeedback("Session expired. Please login.", "error");
+    return;
+  }
+
+  try {
+    await axios.post(`${API_BASE_URL}/api/products`, {
+      name: newProduct.name,
+      sku: newProduct.sku,
+      price: newProduct.price,
+      quantity: newProduct.quantity,
+      userEmail: user.email,
+    });
+
+    setNewProduct({ name: "", sku: "", price: "", quantity: "" });
+    fetchProducts();
+    showFeedback("Registered Successfully", "success");
+  } catch (err) {
+    console.error("Registration failed:", err);
+    showFeedback("SKU already exists in your inventory!", "error");
+  }
+};
 
   const updateQuantity = async (product, change) => {
     const newQty = parseInt(product.quantity) + change;
